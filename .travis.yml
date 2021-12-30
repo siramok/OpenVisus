@@ -24,8 +24,9 @@ matrix:
   fast_finish: false
   include:
 
-    - os : osx
+    - os: osx
       osx_image: xcode13.1 # see https://docs.travis-ci.com/user/reference/osx/#macos-version
+      language: cpp
       compiler: clang
       script: |
         set -ex
@@ -33,6 +34,7 @@ matrix:
         echo $PYTHON_VERSION
         
     - os: windows
+      language: cpp
       script: |
         set -ex
         uname -a
@@ -40,6 +42,7 @@ matrix:
 
     - os: linux
       dist: focal
+      language: cpp
       sudo: required
       services:
        - docker   

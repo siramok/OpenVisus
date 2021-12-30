@@ -9,18 +9,24 @@ trigger:
 
 jobs:
   
-   - job: macos-job
+   - job: macos_job
      pool:
-       vmImage: 'macOS-10.15'
+       vmImage: 'macOS-latest'
      steps:
      - bash: |
          echo "macos-job"
 
-   - job: linux-job
+   - job: linux_job
      pool:
        vmImage: 'ubuntu-latest'
      steps:
      - bash: |
            echo "ubuntu job"
       
+   - job: windows_job
+     pool:
+       vmImage: 'windows-latest'
+     steps:
+     - bash: |
+           echo "windows job"      
                                      
