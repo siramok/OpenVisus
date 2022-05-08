@@ -213,7 +213,7 @@ DetectAndSetupCompiler()
 include(FindPackageHandleStandardArgs)
 
 if (VISUS_GUI)
-	find_package(Qt5 COMPONENTS Core Widgets Gui OpenGL REQUIRED PATHS ${Qt5_DIR} NO_DEFAULT_PATH)
+	find_package(Qt5 COMPONENTS Core Widgets Gui OpenGL REQUIRED)
 endif()
 
 if (VISUS_PYTHON)

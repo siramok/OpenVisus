@@ -807,6 +807,9 @@ public:
   //bundleAdjustment
   void bundleAdjustment(double ba_tolerance, String algorithm="");
 
+  // localBundleAdjustment
+  void localBundleAdjustment(double ba_tolerance, const std::vector<int>& mask);
+
   //doPostIterationAction
   virtual void doPostIterationAction() {
   }
