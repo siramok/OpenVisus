@@ -140,7 +140,7 @@ public:
   virtual void updateSolution() = 0;
 
   //doBundleAdjustment
-  void doBundleAdjustment()
+  virtual void doBundleAdjustment()
   {
     Time t1 = Time::now();
 
@@ -350,6 +350,7 @@ public:
         camera->ba.vertex = vertex;
       }
 
+
       //add matches (edge)
       for (auto camera2 : slam->cameras)
       {
@@ -394,6 +395,79 @@ public:
 
 
   };
+    //////////////////////////////////////////////////////////////////////////////////
+    class LocalBundleAdjustment : public SlamBundleAdjustment {
+    public:
+        const std::vector<int>& mask;
+        LocalBundleAdjustment(Slam* slam_, double gainThreshold_, const std::vector<int>& mask_) : SlamBundleAdjustment(slam_, gainThreshold_), mask(mask_) {
+        }
+
+        //doBundleAdjustment
+        void doBundleAdjustment() override
+        {
+            Time t1 = Time::now();
+            std::vector<Camera*> temp;
+            for (int i = 0; i < slam->cameras.size(); ++i)
+            {
+                if (mask.at(i))
+                {
+                    temp.push_back(slam->cameras.at(i));
+                }
+            }
+            slam->cameras.swap(temp);
+
+            setInitialSolution();
+
+            optimizer->addPostIterationAction(new MyPostIterationAction(this));
+            optimizer->initializeOptimization();
+            optimizer->optimize(std::numeric_limits<int>::max());
+
+            PrintInfo(" bundleAdjustment done in ", t1.elapsedMsec(), "msec", " #cameras(", slam->cameras.size(), ")");
+            slam->cameras.swap(temp);
+        }
+
+        //setInitialSolution
+        void setInitialSolution() override
+        {
+            //add calibration vertex
+            Kvertex = new BACalibrationVertex(slam->calibration);
+            Kvertex->setId(VertexId++);
+            Kvertex->setFixed(slam->calibration.bFixed);
+            optimizer->addVertex(Kvertex);
+
+//            //add camera vertex
+//            for (auto camera : slam->cameras)
+//            {
+//                auto vertex = new BACameraVertex(camera);
+//                vertex->setId(VertexId++);
+//                vertex->setFixed(camera->bFixed);
+//                optimizer->addVertex(vertex);
+//                camera->ba.vertex = vertex;
+//            }
+
+            //add matches (edge)
+            for (auto camera2 : slam->cameras)
+            {
+                auto vertex = new BACameraVertex(camera2);
+                vertex->setId(VertexId++);
+                vertex->setFixed(camera2->bFixed);
+                optimizer->addVertex(vertex);
+                camera2->ba.vertex = vertex;
+                for (auto camera1 : slam->cameras)
+                {
+                    if (camera1->id < camera2->id)
+                    {
+                        for (auto match : camera2->getEdge(camera1)->matches)
+                        {
+                            auto s1 = Point2d(camera1->keypoints[match.queryIdx].x, camera1->keypoints[match.queryIdx].y);
+                            auto s2 = Point2d(camera2->keypoints[match.trainIdx].x, camera2->keypoints[match.trainIdx].y);
+                            optimizer->addEdge(new BAEdge(camera1, s1, camera2, s2, Kvertex));
+                        }
+                    }
+                }
+            }
+        }
+    };
 
   //////////////////////////////////////////////////////////////////////////////////
   class OffsetBundleAdjustment : public BundleAdjustment
@@ -517,7 +591,7 @@ public:
       }
     }
 
-    //updateSolution 
+    //updateSolution
     virtual void updateSolution() override
     {
       for (auto camera : slam->cameras)
@@ -538,6 +612,10 @@ public:
       OffsetBundleAdjustment(this, ba_tolerance).doBundleAdjustment();
     else
       SlamBundleAdjustment(this, ba_tolerance).doBundleAdjustment();
+  }
+
+  void Slam::localBundleAdjustment(double ba_tolerance, const std::vector<int>& mask) {
+      LocalBundleAdjustment(this, ba_tolerance, mask).doBundleAdjustment();
   }
 
 }//end namespace
